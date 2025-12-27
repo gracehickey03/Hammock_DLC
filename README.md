@@ -1,2 +1,4 @@
 # Hammock_DLC
-DeepLabCut protocols and resources for the Hammock Lab!
+Repository for DeepLabCut protocols and resources for the Hammock Lab!
+
+Contact: Grace Hickey (gch22a@fsu.edu)
