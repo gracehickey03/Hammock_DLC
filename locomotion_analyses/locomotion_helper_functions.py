@@ -24,40 +24,7 @@ def csv_list(dir):
     
     return csvs
 
-def select_roi(vid_path, message):
-    # cup dimater: 7.5 cm
-    x_diam = 7.5
-    y_diam = 7.5
-    
-    # pixels-to-centimeters conversion
-    cap = cv2.VideoCapture(vid_path)
-    if not cap.isOpened():
-        print(f"Error: Could not open video at {vid_path}")
-    print("video opened")
 
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 100)
-
-    success, frame = cap.read()
-
-    if success: 
-        print(f"Successfully captured frame")
-    else:
-        print(f"Error: could not read frame.")
-
-    cap.release()
-
-    window_name = message
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL) # Allows resizing
-    cv2.resizeWindow(window_name, 1280, 720) # Set to 1280x720 pixels
-    x1, y1, x2, y2 = cv2.selectROI(window_name, frame, showCrosshair=True, fromCenter=False)
-
-    width = x2 - x1
-    height = y2 - y1
-    # convert pixels to cm 
-    pix_per_cm_x = width/x_diam
-    pix_per_cm_y = height/y_diam
-    
-    return x1, y1, x2, y2, pix_per_cm_x, pix_per_cm_y
 
 
 def import_bodypart(f, bodypart):
@@ -71,10 +38,10 @@ def import_bodypart(f, bodypart):
         y: array of bodypart's y coordinates from all frames
         p: array of bodypart's likelihood values from all frames
     """
-    df = pd.read_csv(f, skiprows=1, header=0)   # skip first row, make headers bodyparts (new row 0)
-    df = df.filter(like=bodypart, axis=1)[1:]   # filter for rows containing 'bodypart' (pandas will import as e.g. nose, nose.1, nose.2)
+    df = pd.read_csv(f, header=[0,1,2])   # skip first row, make headers bodyparts (new row 0)
+    df = df.filter(like=bodypart, axis=1)   # filter for rows containing 'bodypart' (pandas will import as e.g. nose, nose.1, nose.2)
     # print(df.head())
-
+    
     x = np.array(df.iloc[:, 0], dtype=float)
     y = np.array(df.iloc[:, 1], dtype=float)
     p = np.array(df.iloc[:, 2], dtype=float)
@@ -114,17 +81,17 @@ def binned_dist(sec_dists, time, unit):
     Outputs: 
         dists: total distance traveled per chunk of time 
     """ 
-    if unit.lower() == 's': 
+    if unit.lower() == 's':
         n = 1
-    elif unit.lower() == 'm': 
+    elif unit.lower() == 'm':
         n = 60
     else:
-        raise Exception("unit input should be 's' or 'm'")
+        raise ValueError("unit input should be 's' or 'm'")
 
-    idx_exc = len(sec_dists)%(n*time)       # excludes last incomplete unit of time being examined
-    sec_trimmed = sec_dists[0:-idx_exc]     
+    bin_size = n * time
+    sec_dists = np.asarray(sec_dists)
 
-    chunked = np.array(sec_trimmed).reshape(-1, n*time) # chunk array  
-    dists = np.sum(chunked, axis=1)     # sum distance traveled over each unit of time of interest
+    n_full_bins = len(sec_dists) // bin_size
+    sec_dists = sec_dists[:n_full_bins * bin_size]
 
-    return dists
+    return sec_dists.reshape(n_full_bins, bin_size).sum(axis=1)
