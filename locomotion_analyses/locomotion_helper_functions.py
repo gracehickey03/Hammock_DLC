@@ -1,7 +1,7 @@
 # Created: Jan 19, 2026
 # Last modified: Jan 19, 2026
-# Last git commit: 
-## Updates: created. 
+# Last git commit: Jan 19, 2026
+## Updates: created. Added csv_list, select_roi, import_bodypart, second_movement.
 
 # Functions used for locomotion analysis with DLC pose estimation data. 
 
@@ -100,5 +100,31 @@ def second_movement(x, y, fps, pix_per_cm_x, pix_per_cm_y):
     # calculate cm traveled every second using euclidean distance formular and pix per cm conversion factor 
     for i in range(1, len(x_secs)):
         dists[i] = np.sqrt(( (x_secs[i] - x_secs[i-1])/pix_per_cm_x )**2 + ( (y_secs[i] - y_secs[i-1])/pix_per_cm_y )**2)
+
+    return dists
+
+def binned_dist(sec_dists, time, unit):
+    """
+    Function that returns the total distance moved over a given period of time
+    Inputs: 
+        sec_dists: array with total distance moved per second (i.e. the output of second_movement)
+        time: period of time over which to chunk
+        unit: unit to go with time; 's' = sec, 'm' = min
+            e.g. to do 5 minute chunks, time = 5, unit = 'm'
+    Outputs: 
+        dists: total distance traveled per chunk of time 
+    """ 
+    if unit.lower() == 's': 
+        n = 1
+    elif unit.lower() == 'm': 
+        n = 60
+    else:
+        raise Exception("unit input should be 's' or 'm'")
+
+    idx_exc = len(sec_dists)%(n*time)       # excludes last incomplete unit of time being examined
+    sec_trimmed = sec_dists[0:-idx_exc]     
+
+    chunked = np.array(sec_trimmed).reshape(-1, n*time) # chunk array  
+    dists = np.sum(chunked, axis=1)     # sum distance traveled over each unit of time of interest
 
     return dists
